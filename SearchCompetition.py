@@ -1,3 +1,13 @@
+'''
+Version: 2021.03.13
+Script för att söka efter tävlingar i en xml fil från följande api https://eventor.orientering.se/api/events
+
+1. Öppnar filen
+2. Fil --> lista med event
+3. Sökfunktion (olika funktioner som jämför söksträngen med eventen i listan)
+4. Resultat till tabell
+'''
+
 import requests
 from xml.etree import ElementTree
 import datetime 
@@ -6,44 +16,48 @@ import os
 from difflib import SequenceMatcher
 import logging
 
-logging.basicConfig(filename='SClog.log', filemode='w', format='%(asctime)s - %(message)s')
+#logging.basicConfig(filename='app.log', filemode='w+', format='%(asctime)s - %(message)s')
 
 path = os.environ.get('ResBotFilePath')
 
 def search(ss):
-    # Compares two strings and returns a score 0-1 how close they are
-    def similar(a, b):
-        #https://docs.python.org/3/library/difflib.html
-        return SequenceMatcher(None, a, b).ratio()
-
-
-    def compare(a, b):
-        def fixS(string):
-            string = string.lower() #make charachters lowercase
-
-            characters_to_remove = ",.()-"
-
-            for character in characters_to_remove: # remove "charachters_to_remove" from string
-                string = string.replace(character, " ")
-            
-            string = string.split(sep=(" ")) # make string into list where each word is one object
-            return string
-
-        a = fixS(a)
-        b = fixS(b)
-
-        matchCount = 0
-        for wordA in a:
-            for wordB in b:
-                if wordA == wordB:
-                    matchCount += 1
-
-        score = matchCount / len(a)
-
-        return score
-
+    logging.info("Search request")
     # Search in list with dicts
     def search(searchString=None, searchList=None, dictString=None, results=10, minScore=0.6):
+
+        logging.info("Searchparameters: \n ss: " + searchString + " \n ds: " + dictString + " \n r: " + str(results) + " \n ms: " + str(minScore))
+        # Compares two strings and returns a score 0-1 how close they are
+        def similar(a, b):
+            #https://docs.python.org/3/library/difflib.html
+            return SequenceMatcher(None, a, b).ratio()
+
+        # Compares words in two strings and returns score 1p for each words thats same
+        def compare(a, b):
+            def fixS(string):
+                string = string.lower() #make charachters lowercase
+
+                characters_to_remove = ",.()-"
+
+                for character in characters_to_remove: # remove "charachters_to_remove" from string
+                    string = string.replace(character, " ")
+                
+                string = string.split(sep=(" ")) # make string into list where each word is one object
+                return string
+
+            a = fixS(a)
+            b = fixS(b)
+
+            matchCount = 0
+            for wordA in a:
+                for wordB in b:
+                    if wordA == wordB:
+                        matchCount += 1
+
+            score = matchCount / len(a)
+
+            return score
+
+
         '''
         searchString: search string
         searchList: list with dicts
@@ -60,9 +74,10 @@ def search(ss):
 
             event["score"] = score
 
+        #Sort list by score
         searchList = sorted(searchList, reverse = True, key = lambda i: i["score"]) #https://www.geeksforgeeks.org/ways-sort-list-dictionaries-values-python-using-lambda-function/
 
-        if results == 0: #if  results=0 all objects with greater score than minScore will be returned
+        if results == 0: #if results=0 all objects with greater score than minScore will be returned
             results = len(searchList)
         searchList = searchList[:results]
 
@@ -82,24 +97,39 @@ def search(ss):
 
         for event in events: #Loops for each event
 
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}" #Error template
+            
             try: #Find event id
                 eventId = event.find("EventId").text
             except Exception as e:
-                logging.warning(e)
+                logging.warning("EventId")
+                  
+                message = template.format(type(e).__name__, e.args)
+                logging.warning(message)
+
                 eventId = "-----"
+
 
             try: #Find eventName
                 eventName = event.find("Name").text.encode("latin1").decode("utf-8")
             except Exception as e:
-                logging.warning(e)
-                eventName = event.find("Name").text
+                if type(e).__name__ != "UnicodeDecodeError" and type(e).__name__ != "UnicodeEncodeError":
+                    print(type(e).__name__)
+                    logging.warning("EventName:")
+                    message = template.format(type(e).__name__, e.args)
+                    logging.warning(message)
 
+                eventName = event.find("Name").text
+                
             try: #Find event date
                 eventRace = event.find("EventRace")
                 RaceDate = eventRace.find("RaceDate")
                 eventDate = datetime.datetime.strptime(RaceDate.find("Date").text, '%Y-%m-%d')
             except Exception as e:
-                logging.warning(e)
+                logging.warning("EventDate:")
+                message = template.format(type(e).__name__, e.args)
+                logging.warning(message)
+
                 eventDate = "yyyy-mm-dd"
             
             eventList.append({"score": None, "id": eventId, "name": eventName, "date":eventDate}) #Append to list as dict
@@ -108,19 +138,19 @@ def search(ss):
 
 
     # Open and read event-list file
-    logging.warning("Opening file " + path + "/eventList.xml")
+    logging.info("Opening file " + path + "/eventList.xml")
     with open(path + "/eventList.xml", "r", encoding="utf8") as file:
         data = file.read()
-    logging.warning("done")
+    logging.info("done")
 
     events = ElementTree.fromstring(data) # Data to xml element tree
     eventList = parseXML(events) # Get event id/name/date as dicts in list
 
-    logging.warning("Number of competitions: " + str(len(eventList)))
+    logging.info("Number of competitions: " + str(len(eventList)))
 
     searchLis = search(searchString=str(ss), searchList=eventList, dictString="name")
 
-    logging.warning("Number of results " + str(len(searchLis["results"])))
+    logging.info("Number of results " + str(len(searchLis["results"])))
     if len(searchLis["results"]) > 5:
         msg = str(round(searchLis["time"],3)) + "s" + "\n"
         msg += ("Id    | Date       | SearchMatch | Name\n")
@@ -132,5 +162,3 @@ def search(ss):
         msg = "No results"
 
     return msg
-
-#print(search("test"))

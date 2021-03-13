@@ -1,5 +1,5 @@
 '''
-Version: 2021.03.12
+Version: 2021.03.13
 Används för att ladda ned sträcktider för all löparen från samma klubb från en tävling.
 '''
 

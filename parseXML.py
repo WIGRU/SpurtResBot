@@ -1,18 +1,36 @@
+'''
+Version: 2021.03.13
+Används för att läsa in resultatfil få resultat i en "dict-list"
+'''
+
 from xml.etree import ElementTree as ET
 import datetime
 import os
+import logging
+
+SysVarDownloadFPkey = 'ResBotFilePath'
 
 def parse(c):
-    path = os.environ.get('ResBotFilePath')
+    logging.info("Parse request")
+
+    logging.info("getting token with key: " + SysVarDownloadFPkey)
+    path = os.environ.get(SysVarDownloadFPkey)
+    if path == None:
+        logging.info("Could not get path with key " + SysVarDownloadFPkey)
+        quit()
+
     try:
-        tree = ET.parse(path + "\\" + str(c) + '.xml')
+        f = path + "\\" + str(c) + '.xml'
+        tree = ET.parse(f)
     except Exception as e:
+        logging.info("Could not find file: " + f)
         return False
 
     root = tree.getroot()
 
     Event = root.find("Event")
     competitionName = Event.find("Name")
+    logging.info("event name: " + competitionName)
     EventRace = Event.find("StartDate")
     raceDate = EventRace.find("Date")
 
@@ -73,5 +91,6 @@ def parse(c):
             try:
                 results.append({"name": runnerName, "class": className.text, "status": status, "time": runnerTime, "pos": pos, "splits": cSplits, "lastCcode": lastCode, "lastSplitTime": spurttid})
             except Exception as e:
-                print(e)
+                logging.info(e)
+
     return {"name": competitionName.text, "raceDate": raceDate.text, "results": results}

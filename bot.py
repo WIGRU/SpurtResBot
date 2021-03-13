@@ -1,24 +1,44 @@
+'''
+Version 2021.02.13
+En discord-bot som gör en resultatlista över bästa spurttider inom en klubb
+
+Kommandon:
+!Hej --> Hej <namn>
+!Hjälp --> List på kommandon
+!Res <tävlingsID> --> Topp tio bästa spurttider i klubben
+!Sök <tävling> --> Lista på tävlingar och dess Id:n
+'''
+
 import discord
-import requests
-import re
 import os
-from xml.etree import ElementTree as ET
-import datetime
 from tabulate import tabulate
-import datetime
 import logging
 
 import parseXML
 import downloadResults
 import SearchCompetition
 
-TOKEN = os.environ.get('spurtResBot') #Get token from systemvariables
+SysVarTokenKey = 'spurtResBot'
+
+# Config log
+logging.basicConfig(filename='app.log', filemode='w', format='%(asctime)s - %(message)s')
+logging.getLogger().setLevel(logging.INFO)
+
+
+#get discord token
+logging.info("getting token with key: " + SysVarTokenKey)
+TOKEN = os.environ.get(SysVarTokenKey) #Get token from system variables
+if TOKEN == None:
+    logging.warning("Could not get Token")
+    quit()
+
+
 client = discord.Client()
+
 
 @client.event
 async def on_message(message):
-    print(message.author)
-    print(message.content)
+    logging.info(str(message.author) + ": " + str(message.content)) 
 
 
     # The bot is not supposed to answer its own messages.
@@ -26,27 +46,30 @@ async def on_message(message):
         return
 
 
-    if message.content.startswith('!Hello'):
-        msg = 'Hello {0.author.mention}'.format(message)
+    if message.content.startswith('!Hej'):
+        msg = 'Hej {0.author.mention}'.format(message)
+        await message.channel.send(msg)
+
+
+    if message.content.startswith('!Hjälp'):
+        msg = 'Sök efter tävling "!Sök <tävlingsnamn>" \n' + 'Hämta spurttider "!Res <tävlingsId>" t.ex. "!Res 30549" '.format(message)
         await message.channel.send(msg)
     
 
     if message.content.startswith('!Res'):
         try:
-            print(message.content)
-
             eventId = message.content.split(" ")[1]
-            print(eventId)
+            logging.info(eventId)
 
             try:
                 results = parseXML.parse(eventId)
-                print(results)
+                logging.info(results)
                 if results == False:
                     downloadResults.download(eventId)
                     results = parseXML.parse(eventId)
 
             except Exception as e:
-                print(e)
+                logging.info(e)
                 
             try:
                 res = []
@@ -59,7 +82,6 @@ async def on_message(message):
                     return sub_li 
 
                 l = Sort(res)
-                print("")
 
                 msg = "Topp 10 tider på spurten på: " + results["name"] + "\n"
                 msg += "i Järfälla OK" + "\n"
@@ -69,9 +91,9 @@ async def on_message(message):
             
             except Exception as e:
                 msg = "error"
-                print(e)
+                logging.info(e)
         except Exception as e:
-            print(e)
+            logging.info(e)
             msg = "error"
     
         await message.channel.send(msg)
@@ -86,11 +108,9 @@ async def on_message(message):
 
 @client.event
 async def on_ready():
-
-    print('Logged in as')
-    print(client.user.name)
-    print(client.user.id)
-    print('------------')
+    logging.info('Logged in as')
+    logging.info(client.user.name)
+    logging.info(client.user.id)
 
 
 client.run(TOKEN)
