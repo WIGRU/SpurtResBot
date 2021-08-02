@@ -1,6 +1,6 @@
 '''
 Version: 2021.03.13
-Script för att söka efter tävlingar i en xml fil från följande api https://eventor.orientering.se/api/events
+Söker efter tävlingar i en xml fil från följande api https://eventor.orientering.se/api/events
 
 1. Öppnar filen
 2. Fil --> lista med event
@@ -15,10 +15,10 @@ import time
 import os
 from difflib import SequenceMatcher
 import logging
-
+import config
 #logging.basicConfig(filename='app.log', filemode='w+', format='%(asctime)s - %(message)s')
 
-path = os.environ.get('ResBotFilePath')
+path = config.paths["downloadsPath"]
 
 def search(ss):
     logging.info("Search request")
@@ -151,7 +151,10 @@ def search(ss):
     searchLis = search(searchString=str(ss), searchList=eventList, dictString="name")
 
     logging.info("Number of results " + str(len(searchLis["results"])))
+
+    found = False
     if len(searchLis["results"]) > 5:
+        found = True
         msg = str(round(searchLis["time"],3)) + "s" + "\n"
         msg += ("Id    | Date       | SearchMatch | Name\n")
         msg += ("------------------------------------------------------------------\n")
@@ -161,4 +164,4 @@ def search(ss):
     else:
         msg = "No results"
 
-    return msg
+    return {'status': found, 'msg': msg}

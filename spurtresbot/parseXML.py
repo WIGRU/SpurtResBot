@@ -1,23 +1,18 @@
 '''
-Version: 2021.03.13
-Används för att läsa in resultatfil få resultat i en "dict-list"
+Version: 2021-08-02
+Används för att läsa resultatfil få en "dict-list"
 '''
 
 from xml.etree import ElementTree as ET
 import datetime
 import os
 import logging
-
-SysVarDownloadFPkey = 'ResBotFilePath'
+import config
 
 def parse(c):
     logging.info("Parse request")
 
-    logging.info("getting token with key: " + SysVarDownloadFPkey)
-    path = os.environ.get(SysVarDownloadFPkey)
-    if path == None:
-        logging.info("Could not get path with key " + SysVarDownloadFPkey)
-        quit()
+    path = config.paths["downloadsPath"]
 
     try:
         f = path + "\\" + str(c) + '.xml'
@@ -30,7 +25,7 @@ def parse(c):
 
     Event = root.find("Event")
     competitionName = Event.find("Name")
-    logging.info("event name: " + competitionName)
+    logging.info("event name: " + str(competitionName))
     EventRace = Event.find("StartDate")
     raceDate = EventRace.find("Date")
 

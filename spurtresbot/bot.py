@@ -1,6 +1,6 @@
 '''
-Version 2021.02.13
-En discord-bot som gör en resultatlista över bästa spurttider inom en klubb
+Version 2021-08-02
+En discord-bot som visar de bästa spurttiderna inom en klubb för en tävling
 
 Kommandon:
 !Hej --> Hej <namn>
@@ -13,27 +13,26 @@ import discord
 import os
 from tabulate import tabulate
 import logging
-
 import parseXML
 import downloadResults
 import SearchCompetition
+import config
 
-SysVarTokenKey = 'spurtResBot'
 
-# Config log
+# config log
 logging.basicConfig(filename='app.log', filemode='w', format='%(asctime)s - %(message)s')
-logging.getLogger().setLevel(logging.INFO)
+logging.getLogger().setLevel(20)
 
 
-#get discord token
-logging.info("getting token with key: " + SysVarTokenKey)
-TOKEN = os.environ.get(SysVarTokenKey) #Get token from system variables
+# get token from system
+logging.info("getting token with key: " + config.keys["DiscordTokenName"])
+TOKEN = os.environ.get(config.keys["DiscordTokenName"])
 if TOKEN == None:
     logging.warning("Could not get Token")
     quit()
 
 
-client = discord.Client()
+client = discord.Client() # init
 
 
 @client.event
@@ -52,7 +51,7 @@ async def on_message(message):
 
 
     if message.content.startswith('!Hjälp'):
-        msg = 'Sök efter tävling "!Sök <tävlingsnamn>" \n' + 'Hämta spurttider "!Res <tävlingsId>" t.ex. "!Res 30549" '.format(message)
+        msg = 'Sök efter tävling "!Sök <tävlingsnamn>" \n' + 'Hämta spurttider "!Res <tävlingsId>" t.ex. "!Res 30549" '
         await message.channel.send(msg)
     
 
@@ -62,10 +61,10 @@ async def on_message(message):
             logging.info(eventId)
 
             try:
-                results = parseXML.parse(eventId)
+                results = parseXML.parse(eventId) #checks if results are allredy downloaded
                 logging.info(results)
                 if results == False:
-                    downloadResults.download(eventId)
+                    downloadResults.download(eventId) #download results
                     results = parseXML.parse(eventId)
 
             except Exception as e:
